@@ -57,6 +57,8 @@ app.get("/score", async (req, res) => {
   }
 });
 
-app.listen(3000, () => {
-  console.log("Server started");
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log("Server started on port " + PORT);
 });
