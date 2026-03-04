@@ -1,5 +1,5 @@
 const express = require("express");
-const puppeteer = require("puppeteer-core");
+const puppeteer = require("puppeteer");
 
 const app = express();
 
@@ -16,8 +16,8 @@ app.get("/score", async (req, res) => {
 
   try {
     const browser = await puppeteer.launch({
-  args: ["--no-sandbox", "--disable-setuid-sandbox"],
-  executablePath: "/usr/bin/chromium-browser"
+  headless: "new",
+  args: ["--no-sandbox","--disable-setuid-sandbox"]
 });
 
     const page = await browser.newPage();
