@@ -1,65 +1,73 @@
 const express = require("express");
-const puppeteer = require("puppeteer");
+const axios = require("axios");
+const cheerio = require("cheerio");
 
 const app = express();
 
-app.get("/", (req, res) => {
-  res.send("SSC Score API running");
+app.get("/", (req,res)=>{
+    res.send("SSC Score API running");
 });
 
-app.get("/score", async (req, res) => {
-  const url = req.query.url;
+app.get("/score", async (req,res)=>{
 
-  if (!url) {
-    return res.json({ error: "URL missing" });
-  }
+    const url = req.query.url;
 
-  try {
-    const browser = await puppeteer.launch({
-  headless: "new",
-  args: ["--no-sandbox","--disable-setuid-sandbox"]
-});
+    if(!url){
+        return res.json({error:"URL missing"});
+    }
 
-    const page = await browser.newPage();
+    try{
 
-    await page.goto(url, { waitUntil: "networkidle2" });
+        const response = await axios.get(url,{
+            headers:{
+                "User-Agent":"Mozilla/5.0"
+            }
+        });
 
-    const result = await page.evaluate(() => {
+        const html = response.data;
 
-      const correct = document.querySelectorAll('[bgcolor="green"]').length;
-      const wrong = document.querySelectorAll('[bgcolor="red"]').length;
-      const notAttempted = document.querySelectorAll('[bgcolor="gray"]').length;
+        const $ = cheerio.load(html);
 
-      const session1Correct = Math.min(correct, 40);
-      const session2Correct = Math.max(0, correct - 40);
+        let correct = 0;
+        let wrong = 0;
+        let not_attempted = 0;
 
-      const session1 = session1Correct * 3;
-      const session2 = (session2Correct * 3) - wrong;
+        $("td").each((i,el)=>{
 
-      const total = session1 + session2;
+            const bg = $(el).attr("bgcolor");
 
-      return {
-        correct,
-        wrong,
-        notAttempted,
-        session1,
-        session2,
-        total
-      };
+            if(bg==="green") correct++;
+            if(bg==="red") wrong++;
+            if(bg==="gray") not_attempted++;
 
-    });
+        });
 
-    await browser.close();
+        const session1Correct = Math.min(correct,40);
+        const session2Correct = Math.max(0,correct-40);
 
-    res.json(result);
+        const session1 = session1Correct * 3;
+        const session2 = (session2Correct * 3) - wrong;
 
-  } catch (err) {
-    res.json({ error: err.message });
-  }
+        const total = session1 + session2;
+
+        res.json({
+            correct,
+            wrong,
+            not_attempted,
+            session1,
+            session2,
+            total
+        });
+
+    }catch(err){
+
+        res.json({error:"Unable to fetch SSC page"});
+    }
+
 });
 
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
-  console.log("Server started on port " + PORT);
+app.listen(PORT, ()=>{
+    console.log("Server running on port "+PORT);
 });
